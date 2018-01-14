@@ -5,6 +5,7 @@
 返回一个开发用的node服务器，主要提供功能为：  
 1. 静态服务器功能  
 2. 提供一个支持stomp协议websocket服务器  
+提示： 应该只被用作开发过程中的模拟服务器
 
 ## 开始使用  
 ### 安装
@@ -13,7 +14,7 @@
 在项目根目录下，创建server.js文件，内容：
 ```
 var StompServer = require('stomp-ws-server');
-// 参数说明见config.js
+// 参数说明见config.js  
 var server = new StompServer({});
 ```
 运行server.js文件：
