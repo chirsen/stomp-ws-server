@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+	<style>
+		.pannel {
+			width: 100%;
+			height: 600px;
+			overflow: scroll;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="pannel" id="pannel"></div>
+	<input type="text" id="msg">
+	<button id="btn">发送消息</button>
+	<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+	<script src="./stomp.js"></script>
+	<script>
+		var pannel = document.querySelector('#pannel');
+		var input = document.querySelector('#msg');
+		var btn = document.querySelector('#btn');
+		// 客户端实例
+		var client = Stomp.client('ws://localhost:61614/stomp');
+		var headers = {
+			login: 'mylogin',
+			passcode: 'mypasscode',
+			'client-id': 'webClient'
+		};
+		// uid来自链接
+		var uid = 'uid';
+		var roomid = '';
+		var path = '/connect';
+
+		var uidStr = window.location.href.split(/\?|\&/).find(item => item.indexOf(
+			'uid') === 0);
+		if (uidStr) {
+			uid = uidStr.split('=')[1];
+		}
+		// 获取房间号
+		$.ajax({
+			url: path,
+			data: {
+				uid: uid
+			},
+			success: function (res) {
+				res = typeof res === 'string' ? JSON.parse(res) : res;
+				roomid = res.destination;
+				createConnect(roomid, uid);
+			}
+		});
+
+		function afterConnect(roomid) {
+			btn.addEventListener('click', function () {
+				var msg = input.value;
+				// 发送信息
+				client.send(roomid, {}, msg);
+			}, false);
+		}
+
+		function createConnect(roomid, uid) {
+			client.connect(headers, function (error) {
+				if (error.command == "ERROR") {
+					console.error(error.headers.message);
+				} else {
+					// 
+					afterConnect(roomid);
+					// 订阅自己的客户端id，方便收到服务器发送过来的信息
+					client.subscribe(uid, function (msg) {
+						var body = msg.body;
+						if (msg.headers['content-type'] == 'application/json') {
+							body = JSON.parse(msg.body)
+						}
+						// 将获取到的信息，显示到面板
+						$("#pannel").append("Received : " + msg.body+'\n');
+					});
+				}
+			});
+		}
+	</script>
+</body>
+
+</html>

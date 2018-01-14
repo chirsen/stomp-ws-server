@@ -2,7 +2,7 @@
   "name": "stomp-ws-server",
   "version": "1.0.0",
   "description": "a simple server",
-  "main": "index.js",
+  "main": "./lib/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -18,6 +18,7 @@
   "homepage": "https://github.com/chirsen/stomp-ws-server#readme",
   "dependencies": {
     "mime": "^2.2.0",
-    "stomp-broker-js": "^1.1.1"
+    "stomp-broker-js": "^1.1.1",
+    "stompjs": "^2.3.3"
   }
 }

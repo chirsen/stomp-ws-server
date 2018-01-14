@@ -1,30 +1,23 @@
 /**
  * 配置项
- * serverId: 服务端的一个订阅，对应的所有客户端将消息发送到该id，类似于房间号
- * mockData: 自定义假数据内容，固定时间间隔发送自定义的假数据到客户端（可指定已连接的特定的客户端， 如果不指定即发送给所有已连接客户端）
- * interval: 发送假数据的时间间隔
+ * desination: 目的地，一个字符串，客户端将要把消息发送到何地，类似与房间号
+ * clientName：客户端的自定义名字
+ * interval: 发送假数据的时间间隔， 默认为1000毫秒
+ * connectUrl:  客户端请求连接，上传uid和获取roomid的地址， 默认为 ‘/connect’
+ * port： 	 服务器监听的接口， 默认为61614
+ * username： 连接服务需要的用户名， 默认为 ‘mylogin’
+ * password： 连接服务需要的密码， 默认为	‘mypasscode’
+ * path： 连接websocket服务的地址，默认为 ‘/stomp’
+ * dir: 静态服务器监听的文件夹
  */
 module.exports = {
-	serverId: 'roomId',
-	mockData: [
-		{	
-			clientIds: ['uid1'], // 该部分数据发送给指定的客户端 不指定当前data会被发给所有已连接客户端
-			data: {				 // 将被发送的数据
-				"code":200, 
-				"content": {
-					"name":"keikei", 
-					"percent":90
-				}
-			}
-		}, {
-			data: {
-				"code":200, 
-				"content": {
-					"name":"keikei", 
-					"percent":90
-				}
-			}
-		}
-	],
-	interval: 10
+	desination: '/destination/roomId',  // 可以是任意的字符串
+	clientName: 'uid',
+	interval: 1000,
+	connectUrl: '/connect',
+	port: 61614,
+	username: 'mylogin',
+	password: 'mypasscode',
+	path: '/stomp',
+	dir: './'
 };
