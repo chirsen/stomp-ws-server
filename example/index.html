@@ -27,11 +27,7 @@
 		var btn = document.querySelector('#btn');
 		// 客户端实例
 		var client = Stomp.client('ws://localhost:61614/stomp');
-		var headers = {
-			login: 'mylogin',
-			passcode: 'mypasscode',
-			'client-id': 'webClient'
-		};
+		
 		// uid来自链接
 		var uid = 'uid';
 		var roomid = '';
@@ -42,6 +38,11 @@
 		if (uidStr) {
 			uid = uidStr.split('=')[1];
 		}
+		var headers = {
+			login: 'mylogin',
+			passcode: 'mypasscode',
+			'clientId': uid
+		};
 		// 获取房间号
 		$.ajax({
 			url: path,
