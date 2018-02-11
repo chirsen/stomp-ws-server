@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%; ">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>测试websocket接口</title>
+	<link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0-beta/css/bootstrap.min.css">
+	<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.min.js"></script>
+	<script src="https://cdn.bootcss.com/popper.js/1.12.5/umd/popper.min.js"></script>
+	<script src="https://cdn.bootcss.com/bootstrap/4.0.0-beta/js/bootstrap.min.js"></script>
+	<!-- 引入stomp和sockjs -->
+	<script src="./sockjs-cli.js"></script>
+	<script src="./stomp.js"></script>
+	<!-- 引入codeMirror -->
+	<link rel=stylesheet href="./codemirror.css">
+	<link rel=stylesheet href="./blackboard.css">
+	<script src="./codemirror.js"></script>
+	<!-- <script src="mode/javascript/javascript.js"></script> -->
+	<style>
+		html,
+		body {
+			height: 100%;
+		}
+
+		.CodeMirror {
+			height: 100%;
+			overflow: hidden;
+		}
+	</style>
+</head>
+
+<body style="height: 100%; overflow-y: hidden; position: relative;">
+	<div style="display: flex; justify-content: space-between; flex-direction: column; height: 100%;">
+		<div style="width: 100%; flex: 0;">
+			<div id="accordion" style="width: 100%; top: 0;">
+				<div class="card" style="width: 100%;">
+					<div class="card-header">
+						<button type="button" class="btn btn-light" id="start">建立连接</button>
+						<button type="button" class="btn btn-light" id="close">关闭连接</button>
+						<button type="button" class="btn btn-light" id="subscrib">订阅</button>
+						<button type="button" class="btn btn-light" id="cancle">取消订阅</button>
+						<button type="button" class="btn btn-light" id="clear">清空</button>
+						<button type="button" class="btn btn-light" data-toggle="collapse" data-parent="#accordion"
+						    href="#collapseOne" id="more">收起配置项</button>
+						<button type="button" class="btn btn-primary" style="float: right;" id="send">发送消息</button>
+					</div>
+					<div id="collapseOne" style="position: absolute; width: 100%; top: 64px; z-index: 10; background: #eee;"
+					    class="collapse show">
+						<!-- 操作按钮组 -->
+						<div class="card-block col-md-12">
+							<div class="row">
+								<div class="form-group col-md-5 col-md-offset-1">
+									<label for="url">websocket 连接地址:</label>
+									<input type="text" class="form-control" id="url">
+								</div>
+								<div class="form-group col-md-5 col-md-offset-1">
+									<label for="topic_sub">订阅topic:</label>
+									<input type="text" class="form-control" id="topic_sub">
+								</div>
+							</div>
+							<div class="row">
+								<div class="form-group col-md-5 col-md-offset-1">
+									<label for="topic_send">发送的topic:</label>
+									<input type="text" class="form-control" id="topic_send">
+								</div>
+								<div class="col-md-1">
+									<button type="button" class="btn btn-primary" style="margin: 30px 0 10px" id="work">生效</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div style="width: 100%; flex: 1; overflow-y: scroll;">
+			<div class="contain">
+				<!-- 消息区 -->
+				<div class="col-md-12" id="info_pannel">
+				</div>
+			</div>
+		</div>
+		<div style="width: 100%; flex: 0; border: solid 1px #aaa;">
+			<div class="row" style="width: 100%; height: 300px; z-index: 5; padding-left: 10px;">
+				<!-- 消息编辑区 -->
+				<div class="form-group col-md-12">
+					<textarea class="form-control" id="msg"></textarea>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- 模态框 -->
+	<div class="modal fade" id="myModal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				 <!-- 模态框头部 -->
+				 <div class="modal-header" id="modalHeader">
+					<h2 class="modal-title">模态框头部</h2>
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+				</div>
+				<div class="modal-body" id="modalContent">
+					
+				</div>
+				<!-- 模态框底部 -->
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+				</div>
+				
+			</div>
+		</div>
+	</div>
+	<script>
+		const $pannel = $('#info_pannel');
+		let socket = null;
+		let client = null;
+		let subObject = null;
+		let connected = false;
+		let showOption = true;
+		$(document).ready(function () {
+			const textArea = document.querySelector('#msg');
+			const editor = CodeMirror.fromTextArea(textArea, {
+				lineNumbers: false,
+				theme: "blackboard"  
+			});
+			// 获取建立socket连接的各种参数
+			reset();
+
+			$('#more').on('click', function () {
+				showOption = !showOption;
+				const text = (showOption ? '收起' : '展开') + '配置项';
+				$('#more').text(text);
+			});
+			// 各种操作的按钮的监听
+			$('#start').on('click', function () {
+				// 建立连接并订阅
+				client = commonConnect(function () {
+					// 成功建立连接
+					modal('建立连接成功', '提示', 2000);
+				});
+			});
+
+			$('#close').on('click', function () {
+				// 关闭socket连接
+				connected && client.disconnect(function () {
+					connected = false;
+					modal('已经关闭连接', '提示', 2000);
+				});
+			});
+
+			$('#subscrib').on('click', function () {
+				commonSubscribe();
+				modal(`已经订阅${window.localStorage.getItem('subtopic')}`, '提示', 2000);
+			});
+
+			$('#cancle').on('click', function () {
+				// 取消订阅
+				subObject && subObject.unsubscribe();
+				modal(`已经取消订阅${window.localStorage.getItem('subtopic')}`, '提示', 2000);
+			});
+
+			$('#clear').on('click', function() {
+				$pannel.html('');
+			});
+
+			$('#work').on('click', function () {
+				// 更改参数配置， 如果更改url，先断开当前连接，再重新连接；如果是topic更改， 取消订阅，再订阅；
+				const connectUrl = $('#url').val();
+				const subTopic = $('#topic_sub').val();
+				const sendTopic = $('#topic_send').val();
+				if(connectUrl !== window.localStorage.getItem('wsurl')) {
+					connected && client.disconnect(function () {
+						connected = false;
+						 client = commonConnect(function () {
+							// 成功建立连接
+							connected = true;
+							modal('建立连接成功', '提示', 2000);
+						});
+					});
+				}
+				if (subTopic !== window.localStorage.getItem('subtopic')) {
+					// 取消订阅再重新订阅
+					commonSubscribe();
+				}
+				save(connectUrl, subTopic, sendTopic);
+			});
+
+			$('#send').on('click', function () {
+				// 发送消息
+				const sendTopic = $('#topic_send').val();
+				const text = editor.getValue();
+				if(!client || (client && !client.connected)) {
+					modal('还未建立连接', '提示');
+					return;
+				}
+				client.send(sendTopic, {
+					'content-type': 'application/json'
+				}, JSON.stringify(text));
+				// 构造发送的消息
+				const sendText =
+					`>>> 发送<br />
+				destination:${sendTopic}<br />
+				${text}
+			`;
+				$pannel.append(toHTML(0, sendText));
+			});
+		});
+
+		function commonConnect(cb) {
+			const connectUrl = $('#url').val();
+			const subTopic = $('#topic_sub').val();
+			const sendTopic = $('#topic_send').val();
+			// socket = new SockJS(connectUrl);
+			// client = Stomp.over(socket);
+			// ws://localhost:61614/mario/pandora-websocket   room001  mockuid
+			save(connectUrl, subTopic, sendTopic);
+			let client = Stomp.client(connectUrl)
+			client && client.connect({}, function (err) {
+				if (err.command === 'ERROR') {
+					console.error(error.headers.message);
+				} else {
+					// 成功建立连接
+					cb();
+				}
+			});
+			return client;
+		}
+
+		function commonSubscribe() {
+			const topic = $('#topic_sub').val();
+			console.log(topic);
+			// 消除前一个订阅`
+			subObject && subObject.unsubscribe();
+			// 开始订阅
+			client && (subObject = client.subscribe(topic, (msg) => {
+				connected = true;
+				// 将接收到的消息展示在pannel里面
+				const sendText = `
+					>>> 收取<br />
+					destination: ${JSON.parse(msg.body).headers.destination}<br />
+					subscription: ${JSON.parse(msg.body).headers.subscription}<br />
+					content: ${JSON.parse(msg.body).msg}
+				`;
+				$pannel.append(toHTML(1, sendText));
+			}));
+		}
+
+		function toHTML(type, text) {
+			// 1 对方， 0 己方
+			return type === 1 ?
+				`
+				<div class="card col-md-7" style="margin: 10px 0;">
+					<div class="card-body">${text}</div>
+				</div>
+			` :
+				`
+				<div class="card bg-success text-white col-md-7" style="margin: 10px; float: right;">
+					<div class="card-body text-right">${text}</div>
+				</div>
+			`;
+		}
+
+		function modal(content, headerText, length) {
+			$('#myModal').on('show.bs.modal', function () {
+				$('#modalHeader').text(headerText);
+				$('#modalContent').text(content);
+			});
+			$('#myModal').modal();
+			if(length) {
+				setTimeout(function() {
+					$('#myModal').modal('hide')
+				}, length);
+			}
+		} 
+
+		// 将生效的配置存入localstorage
+		function save(url, subT, sendT) {
+			window.localStorage.setItem('wsurl', url);
+			window.localStorage.setItem('subtopic', subT);
+			window.localStorage.setItem('sendtopic', sendT);
+		}
+		// 将localstorage中的内容重新写入
+		function reset() {
+			const url = window.localStorage.getItem('wsurl');
+			const subT = window.localStorage.getItem('subtopic');
+			const sendT = window.localStorage.getItem('sendtopic');
+			$('#url').val(url);
+			$('#topic_sub').val(subT);
+			$('#topic_send').val(sendT);
+		}
+	</script>
+</body>
+
+</html>

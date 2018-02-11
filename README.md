@@ -19,6 +19,9 @@ var StompServer = require('stomp-ws-server');
 ```
 运行server.js文件：
 `node server.js` 
+
+### 测试部分
+到test目录下，运行 `node server.js`， 然后访问[测试页](http://localhost:61614/index.html)
   
 即可在当前项目下运行一个服务器，模拟假数据的过程，可参照/example/index.html生成一个页面，专门用作上传假数据
 
