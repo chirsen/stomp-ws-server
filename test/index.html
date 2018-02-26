@@ -43,7 +43,8 @@
 						<button type="button" class="btn btn-light" id="cancle">取消订阅</button>
 						<button type="button" class="btn btn-light" id="clear">清空</button>
 						<button type="button" class="btn btn-light" data-toggle="collapse" data-parent="#accordion"
-						    href="#collapseOne" id="more">收起配置项</button>
+							href="#collapseOne" id="more">收起配置项</button>
+						<button type="button" class="btn btn-info" id="work">配置生效</button>
 						<button type="button" class="btn btn-primary" style="float: right;" id="send">发送消息</button>
 					</div>
 					<div id="collapseOne" style="position: absolute; width: 100%; top: 64px; z-index: 10; background: #eee;"
@@ -65,8 +66,9 @@
 									<label for="topic_send">发送的topic:</label>
 									<input type="text" class="form-control" id="topic_send">
 								</div>
-								<div class="col-md-1">
-									<button type="button" class="btn btn-primary" style="margin: 30px 0 10px" id="work">生效</button>
+								<div class="form-group col-md-5 col-md-offset-1">
+									<label for="topic_send">写入的cookie</label>:</label>
+									<input type="text" class="form-control" id="topic_cookie">
 								</div>
 							</div>
 						</div>
@@ -168,6 +170,8 @@
 				const connectUrl = $('#url').val();
 				const subTopic = $('#topic_sub').val();
 				const sendTopic = $('#topic_send').val();
+				const cookie = $('#topic_cookie').val();
+				document.cookie = cookie;
 				if(connectUrl !== window.localStorage.getItem('wsurl')) {
 					connected && client.disconnect(function () {
 						connected = false;
@@ -182,7 +186,7 @@
 					// 取消订阅再重新订阅
 					commonSubscribe();
 				}
-				save(connectUrl, subTopic, sendTopic);
+				save(connectUrl, subTopic, sendTopic, cookie);
 			});
 
 			$('#send').on('click', function () {
@@ -210,11 +214,15 @@
 			const connectUrl = $('#url').val();
 			const subTopic = $('#topic_sub').val();
 			const sendTopic = $('#topic_send').val();
-			// socket = new SockJS(connectUrl);
-			// client = Stomp.over(socket);
-			// ws://localhost:61614/mario/pandora-websocket   room001  mockuid
-			save(connectUrl, subTopic, sendTopic);
-			let client = Stomp.client(connectUrl)
+			const cookie = $('#topic_cookie').val();
+			socket = new SockJS(connectUrl);
+			client = Stomp.over(socket);
+			// https://game.hiwan360.com/mario/pandora-websocket?uid=10029&roomId=20180226150943ROOM64522596000033&gameId=Mario&t=1519628987631   topic:   mockuid
+			// sub topic:  /topic/room/20180226150943ROOM64522596000033
+			// send topic: /app/room/20180226150943ROOM64522596000033
+			// cookie: _ntes_nnid=32d43896b7d778c625b944474eaca61d;
+			save(connectUrl, subTopic, sendTopic, cookie);
+			// let client = Stomp.client(connectUrl)
 			client && client.connect({}, function (err) {
 				if (err.command === 'ERROR') {
 					console.error(error.headers.message);
@@ -274,19 +282,22 @@
 		} 
 
 		// 将生效的配置存入localstorage
-		function save(url, subT, sendT) {
+		function save(url, subT, sendT, cookie) {
 			window.localStorage.setItem('wsurl', url);
 			window.localStorage.setItem('subtopic', subT);
 			window.localStorage.setItem('sendtopic', sendT);
+			window.localStorage.setItem('cookie', cookie);
 		}
 		// 将localstorage中的内容重新写入
 		function reset() {
 			const url = window.localStorage.getItem('wsurl');
 			const subT = window.localStorage.getItem('subtopic');
 			const sendT = window.localStorage.getItem('sendtopic');
+			const cookie = window.localStorage.getItem('cookie');
 			$('#url').val(url);
 			$('#topic_sub').val(subT);
 			$('#topic_send').val(sendT);
+			$('#topic_cookie').val(cookie);
 		}
 	</script>
 </body>
